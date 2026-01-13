@@ -1,5 +1,5 @@
--- Roblox 全能控制器 (修改版 v1.1 - forsaken專用)
--- 更新：簡化UI，新增智能反繞功能
+local update = "Roblox 全能控制器(修改版 v1.3 - forsaken專用)已載入"
+local update2 = "更新：防反繞會偵測障礙物 偵測到時暫停追蹤"
 
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
@@ -824,6 +824,27 @@ local function performCounterEvade()
     end
     
     print("✅ [防反繞] 找到目標：", targetPlayer.Name, "距離：", distance)
+    
+    -- 【新增】檢查是否有障礙物阻擋
+    local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetHRP then
+        print("❌ [防反繞] 找不到目標的 HRP")
+        return
+    end
+    
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {char, targetPlayer.Character}
+    
+    local directionToTarget = targetHRP.Position - hrp.Position
+    local rayResult = Workspace:Raycast(hrp.Position, directionToTarget, params)
+    
+    if rayResult then
+        print("⚠️ [防反繞] 檢測到障礙物阻擋，暫停追擊（不進冷卻）")
+        return  -- 直接返回，不更新 lastCounterEvadeTime，不進入冷卻
+    end
+    
+    print("✅ [防反繞] 路徑暢通，開始追擊")
     
     -- 檢查冷卻時間
     -- 偽裝模式：1秒冷卻
@@ -2392,7 +2413,8 @@ task.spawn(function()
     if player.Character then task.wait(0.1); getOriginalValues() end
 end)
 
-print("🎮 貓玲的控制器 v3.0 已載入！自動反繞系統就緒。")
+print(update)
+print(update2)
 
 -- ====================
 -- ShiftLock + ESP UI 整合
