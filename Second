@@ -1,5 +1,5 @@
-local update = "Roblox 全能控制器(修改版 v1.4 - forsaken專用)已載入"
-local update2 = "更新：自動省體力系統"
+local update = "Roblox 全能控制器(修改版 v1.3 - forsaken專用)已載入"
+local update2 = "更新：防反繞會偵測障礙物 偵測到時暫停追蹤"
 
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
@@ -52,8 +52,7 @@ local toggles = {
     generatorESP = false,
     itemESP = false,
     autoInvisible = false,
-    autoStaminaSave = false,  -- 【新增】
-    counterEvadeMode = "disguise"
+    counterEvadeMode = "disguise"  -- "disguise" 或 "fullpower"
 }
 
 -- 數值設定
@@ -74,8 +73,7 @@ local connections = {
     autoEvade = nil,
     generatorESP = nil,
     itemESP = nil,
-    autoInvisible = nil,
-    autoStaminaSave = nil  -- 【新增】
+    autoInvisible = nil
 }
 
 -- ESP 顯示緩存
@@ -1513,8 +1511,7 @@ counterModeStatus.Parent = counterModeFrame
 -- 頁面 3 - 其他
 local generatorESPFrame, generatorESPStatus, generatorESPButton = createControlRow(page3, "發電機顯示:", "", "", false, 1)
 local itemESPFrame, itemESPStatus, itemESPButton = createControlRow(page3, "物品顯示:", "", "", false, 2)
-local autoStaminaFrame, autoStaminaStatus, autoStaminaButton = createControlRow(page3, "自動省體力:", "", "", false, 3)  -- 【新增】
-local autoInvisFrame, autoInvisStatus, autoInvisButton = createControlRow(page3, "隱形(可能掉虛空):", "", "", false, 4)  -- 修改 order 為 4
+local autoInvisFrame, autoInvisStatus, autoInvisButton = createControlRow(page3, "隱形(可能掉虛空):", "", "", false, 3)
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0.9, 0, 0, 26)
@@ -1770,70 +1767,6 @@ itemESPButton.MouseButton1Click:Connect(function()
     end
     toggleUIState(itemESPButton, itemESPFrame, itemESPStatus, toggles.itemESP)
 end)
-
--- ====================
--- 自動省體力系統
--- ====================
-
-local lastStaminaSaveTime = 0
-local staminaSaveCooldown = 0.5
-
-local function startAutoStaminaSave()
-    if connections.autoStaminaSave then connections.autoStaminaSave:Disconnect() end
-    
-    if toggles.autoStaminaSave then
-        connections.autoStaminaSave = RunService.Heartbeat:Connect(function()
-            local success, err = pcall(function()
-                local playerGui = player:FindFirstChild("PlayerGui")
-                if not playerGui then return end
-                
-                local tempUI = playerGui:FindFirstChild("TemporaryUI")
-                if not tempUI then return end
-                
-                local playerInfo = tempUI:FindFirstChild("PlayerInfo")
-                if not playerInfo then return end
-                
-                local bars = playerInfo:FindFirstChild("Bars")
-                if not bars then return end
-                
-                local stamina = bars:FindFirstChild("Stamina")
-                if not stamina then return end
-                
-                local amount = stamina:FindFirstChild("Amount")
-                if not amount or not amount:IsA("TextLabel") then return end
-                
-                local staminaText = amount.Text
-                
-                -- 檢查體力是否小於 3/100
-                if staminaText == "2/100" or staminaText == "1/100" or staminaText == "0/100" then
-                    local currentTime = tick()
-                    
-                    -- 檢查冷卻時間
-                    if currentTime - lastStaminaSaveTime >= staminaSaveCooldown then
-                        -- 尋找並點擊 SprintingButton
-                        local mainUI = playerGui:FindFirstChild("MainUI")
-                        if mainUI then
-                            local sprintButton = mainUI:FindFirstChild("SprintingButton")
-                            if sprintButton and sprintButton:IsA("GuiButton") then
-                                -- 模擬點擊
-                                for _, connection in pairs(getconnections(sprintButton.Activated)) do
-                                    connection:Fire()
-                                end
-                                
-                                lastStaminaSaveTime = currentTime
-                                print("💾 自動省體力觸發！當前體力：", staminaText)
-                            end
-                        end
-                    end
-                end
-            end)
-            
-            if not success then
-                -- 靜默處理錯誤，避免刷屏
-            end
-        end)
-    end
-end
 
 -- ====================
 -- 自動隱形系統（原始腳本完整版）
@@ -2320,24 +2253,6 @@ local function startAutoInvisible()
     end
 end
 
--- 自動省體力按鈕
-autoStaminaButton.MouseButton1Click:Connect(function()
-    toggles.autoStaminaSave = not toggles.autoStaminaSave
-    
-    if toggles.autoStaminaSave then
-        startAutoStaminaSave()
-        autoStaminaStatus.Text = "開啟"
-        autoStaminaStatus.TextColor3 = Color3.fromRGB(255, 165, 0)
-        print("💾 自動省體力已啟動")
-    else
-        if connections.autoStaminaSave then connections.autoStaminaSave:Disconnect() end
-        autoStaminaStatus.Text = "關閉"
-        autoStaminaStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
-        print("⏸️ 自動省體力已關閉")
-    end
-    toggleUIState(autoStaminaButton, autoStaminaFrame, autoStaminaStatus, toggles.autoStaminaSave)
-end)
-
 -- 隱形按鈕
 autoInvisButton.MouseButton1Click:Connect(function()
     toggles.autoInvisible = not toggles.autoInvisible
@@ -2420,14 +2335,6 @@ task.spawn(function()
     updateItemESP()
     startItemMonitoring()
     toggleUIState(itemESPButton, itemESPFrame, itemESPStatus, true)
-    
-    -- 自動啟用自動省體力【新增】
-    toggles.autoStaminaSave = true
-    startAutoStaminaSave()
-    autoStaminaStatus.Text = "開啟"
-    autoStaminaStatus.TextColor3 = Color3.fromRGB(255, 165, 0)
-    toggleUIState(autoStaminaButton, autoStaminaFrame, autoStaminaStatus, true)
-    print("💾 自動省體力已自動啟動")
 end)
 
 -- 拖曳功能
@@ -2486,9 +2393,6 @@ closeButton.MouseButton1Click:Connect(function()
     -- 清理所有 ESP
     clearESP("generators")
     clearESP("items")
-    
-    -- 清理自動省體力連線【新增】
-    if connections.autoStaminaSave then connections.autoStaminaSave:Disconnect() end
     
     Lighting.Ambient = trueLightingBackup.Ambient
     Lighting.Brightness = trueLightingBackup.Brightness
